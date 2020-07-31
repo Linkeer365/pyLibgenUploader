@@ -16,7 +16,7 @@ from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 # 子进程不支持input我艹啊...
 
-
+# global glo_comm
 glo_comm="1"
 
 book_dir=r"D:\AllDowns\newbooks"
@@ -66,10 +66,11 @@ def is_isbn(some_num_str: str, num_str_len=11) -> bool:
     return some_num_str.isdigit() and len(some_num_str) == num_str_len
 
 def is_douban_id(some_num_str,num_str_len=6):
-    return some_num_str.isdigit() and len(some_num_str) == num_str_len
+    return some_num_str.isdigit() and len(some_num_str) >= num_str_len
 
 def get_field_from_pattern(some_html, some_field_pattern: str, comm=None,is_douban=0) -> str:
     fields = some_html.xpath(some_field_pattern)
+    global glo_comm
     if fields==[]:
         print("Fields Not Found")
         return None
@@ -86,6 +87,7 @@ def get_field_from_pattern(some_html, some_field_pattern: str, comm=None,is_doub
             glo_comm=comm
     if comm.isdigit():
         order_idx=int(comm)-1
+        glo_comm=comm
         return fields[order_idx]
     elif comm == "j":
         # join list
@@ -111,11 +113,12 @@ def get_page_text(some_url: str, auth_flag=0) -> str:
 
 def fetch_douban_isbn_or_id(some_title:str, old_titles, old_ids):
     print("Book Title:{}".format(some_title))
-    for some_old_idx,some_old_title in enumerate(old_titles):
-        if some_title in some_old_title:
-            print("already")
-            some_old_id=old_ids[some_old_idx].replace("\n","")
-            return some_old_id
+    if bool(old_titles)!=0:
+        for some_old_idx,some_old_title in enumerate(old_titles):
+            if some_title in some_old_title:
+                print("already")
+                some_old_id=old_ids[some_old_idx].replace("\n","")
+                return some_old_id
     last_bit=some_title.rsplit(maxsplit=1)[-1]
     if is_isbn(last_bit):
         douban_isbn=last_bit
@@ -135,15 +138,17 @@ def fetch_douban_isbn_or_id(some_title:str, old_titles, old_ids):
             douban_id=bookinfo
             with open(result_dir+os.sep+"Book And IDs.txt","a",encoding="utf-8") as f:
                 f.write("{}\t{}\n".format(some_title,douban_id))
+            print("\n ==== \n")
             return douban_id
-        booklink_pattern="//a[contains(@href,'%2Fbook.douban.com%2F') and @class='nbg'][position()={}]//@href".format(glo_comm)
-        booklink=get_field_from_pattern(many_titles_html,booklink_pattern,comm="1",is_douban=2)
-
+        print("GLO:{}".format(glo_comm))
+        booklink_pattern="//a[contains(@href,'https://www.douban.com/link2/') and @class='nbg']//@href"
+        booklinks=get_field_from_pattern(many_titles_html,booklink_pattern,comm="r",is_douban=2)
+        booklink=booklinks[int(glo_comm)-1]
         # 可见是4个%2F和5个%2F
         # len(base_str)=76,
         bare_str="https://www.douban.com/link2/?url=https%3A%2F%2Fbook.douban.com%2Fsubject%2F"
         booklink_cut1=booklink[76:]
-        first_idx=booklink.find("%2F")
+        first_idx=booklink_cut1.find("%2F")
         douban_id=booklink_cut1[0:first_idx]
 
         # bookid_slice=slice(len(bare_str),len(full_str))
@@ -153,9 +158,12 @@ def fetch_douban_isbn_or_id(some_title:str, old_titles, old_ids):
 
         # douban_id=booklink[76:83]
         print(douban_id)
+        if not (is_douban_id(douban_id) or is_isbn(douban_id)):
+            douban_id=input("Get it right here:")
+
         with open(result_dir + os.sep + "Book And IDs.txt", "a", encoding="utf-8") as f:
             f.write("{}\t{}\n".format(some_title, douban_id))
-
+        print("\n ==== \n")
         return douban_id
 
 def check_if_uploaded(check_url_with_md5):
@@ -190,6 +198,7 @@ def upload_one_book(some_path, some_id):
 
     r1=requests.post(main_url,data=m,headers=headers2,auth=auth)
 
+    sleep(1)
 
     upload_url=get_upload_url(some_path)
 
@@ -210,7 +219,7 @@ def upload_one_book(some_path, some_id):
             "language":"中文"}
 
     r2=requests.post(upload_url,data=payload,auth=auth)
-
+    sleep(1)
     info_html=etree.HTML(r2.text)
 
     field_name_pattern1="//input[@type='text' and @name and @value]//@name"
@@ -230,13 +239,16 @@ def upload_one_book(some_path, some_id):
 
     fields1=dict(zip(fields_name1,fields_value1))
     fields2=dict(zip(fields_name2,fields_value2))
+    fields2["description"]=mywords+fields2["description"]
 
     # 补上mywords
 
-    for k,v in fields2.items():
-        if k=="description":
-            new_v=mywords+v
-            fields2[k]=new_v
+
+
+    # for k,v in fields2.items():
+    #     if k=="description":
+    #         new_v=mywords+v
+    #         fields2[k]=new_v
 
     # update过程，无返回值r
 
@@ -254,23 +266,24 @@ def upload_one_book(some_path, some_id):
 
 
     for k,v in fields.items():
-        if (not k in must_display_name) and bool(v)==0:
-            continue
+        # if (not k in must_display_name) and bool(v)==0:
+        #     continue
         print("{}:\t{}".format(k,v))
 
-    form_data=fields.copy()
+    form_data={}
 
     for k,v in fields.items():
         v_tup=(None,v)
         form_data[k]=v_tup
 
-    r3=requests.post(upload_url,files=form_data,headers=headers,auth=auth,params=fields)
-
-    print(r3.headers)
+    r3=requests.post(upload_url,files=form_data,headers=headers,auth=auth)
+    # 我他妈傻逼在这个地方多传了一个params=fields！！艹！！
+    sleep(1)
+    print(r3.status_code)
+    print(get_check_url(some_path))
     # if r3.status_code==200:
     #     print("One book uploaded yet.")
-
-    with open(result_dir+os.sep+get_title_from_path(some_path)+"-"+some_id+".txt","w",encoding="utf-8") as f:
+    with open(result_dir+os.sep+get_title_from_path(some_path)+"-"+some_id+"-"+str(r3.status_code)+".txt","w",encoding="utf-8") as f:
         f.write(r3.text)
 
 
@@ -287,10 +300,13 @@ def main():
 
     # 按照修改时间排序，最早的最先出现
     books=sorted(os.listdir(book_dir),key=lambda x: os.path.getmtime(os.path.join(book_dir, x)),reverse=True)
-    with open(result_dir + os.sep + "Book And IDs.txt", "r", encoding="utf-8") as f:
-        lines=f.readlines()
-    old_titles=[each_line.split("\t")[0] for each_line in lines]
-    old_ids=[each_line.split("\t")[1] for each_line in lines]
+    if os.path.exists(result_dir + os.sep + "Book And IDs.txt") and os.path.getsize(result_dir + os.sep + "Book And IDs.txt")!=0:
+        with open(result_dir + os.sep + "Book And IDs.txt", "r", encoding="utf-8") as f:
+            lines=f.readlines()
+        old_titles=[each_line.split("\t")[0] for each_line in lines]
+        old_ids=[each_line.split("\t")[1] for each_line in lines]
+    else:
+        old_titles,old_ids=[],[]
     bookids=[fetch_douban_isbn_or_id(book[:-4],old_titles,old_ids) for book in books]
     # books_bookids=[book[:-4]+"\t"+bookid+"\n" for book,bookid in zip(books,bookids)]
     # books_bookids_str="".join(books_bookids)
@@ -300,6 +316,7 @@ def main():
         bookid=bookids[each_idx]
         book_path=book_dir+os.sep+each_book
         upload_one_book(book_path,bookid)
+        sleep(1)
         # pool.apply_async(single,args=(each_book,))
 
     # print("Pool: Wait for all done.")
