@@ -198,7 +198,6 @@ def upload_one_book(some_path, some_id):
 
     r1=requests.post(main_url,data=m,headers=headers2,auth=auth)
 
-    sleep(1)
 
     upload_url=get_upload_url(some_path)
 
@@ -219,7 +218,7 @@ def upload_one_book(some_path, some_id):
             "language":"中文"}
 
     r2=requests.post(upload_url,data=payload,auth=auth)
-    sleep(1)
+
     info_html=etree.HTML(r2.text)
 
     field_name_pattern1="//input[@type='text' and @name and @value]//@name"
@@ -276,9 +275,8 @@ def upload_one_book(some_path, some_id):
         v_tup=(None,v)
         form_data[k]=v_tup
 
-    r3=requests.post(upload_url,files=form_data,headers=headers,auth=auth)
-    # 我他妈傻逼在这个地方多传了一个params=fields！！艹！！
-    sleep(1)
+    r3=requests.post(upload_url,files=form_data,headers=headers,auth=auth,params=fields)
+
     print(r3.status_code)
     print(get_check_url(some_path))
     # if r3.status_code==200:
@@ -316,7 +314,6 @@ def main():
         bookid=bookids[each_idx]
         book_path=book_dir+os.sep+each_book
         upload_one_book(book_path,bookid)
-        sleep(1)
         # pool.apply_async(single,args=(each_book,))
 
     # print("Pool: Wait for all done.")

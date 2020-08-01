@@ -137,7 +137,10 @@ def main():
                 book_path=book_dir+os.sep+each_book
                 foreign_url=get_upload_url(book_path)
                 foreign_urls.append(foreign_url)
+                print("FOREIGN URLs:{}".format(foreign_url))
             urls=list(set(urls+foreign_urls))
+            print("\n"*5)
+            print(urls)
         md5s.append('\n')
         for each_url in urls:
             each_md5=get_md5(book_type,each_url)
