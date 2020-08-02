@@ -119,7 +119,7 @@ def fetch_douban_isbn_or_id(some_title:str, old_titles, old_ids):
                 print("already")
                 some_old_id=old_ids[some_old_idx].replace("\n","")
                 return some_old_id
-    last_bit=some_title.rsplit("dbdb",maxsplit=1)[-1]
+    last_bit=some_title.rsplit("isbnisbn",maxsplit=1)[-1]
     if is_isbn(last_bit) or is_douban_id(last_bit):
         douban_isbn=last_bit
         with open(result_dir + os.sep + "Books And IDs.txt", "a", encoding="utf-8") as f:
@@ -316,7 +316,7 @@ def main():
     #     f.write(books_bookids_str)
     for each_idx,each_book in enumerate(books):
         bookid=bookids[each_idx]
-        if book_id=="114514":
+        if bookid=="114514":
             continue
         book_path=book_dir+os.sep+each_book
         upload_one_book(book_path,bookid)
