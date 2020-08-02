@@ -119,10 +119,10 @@ def fetch_douban_isbn_or_id(some_title:str, old_titles, old_ids):
                 print("already")
                 some_old_id=old_ids[some_old_idx].replace("\n","")
                 return some_old_id
-    last_bit=some_title.rsplit(maxsplit=1)[-1]
-    if is_isbn(last_bit):
+    last_bit=some_title.rsplit("dbdb",maxsplit=1)[-1]
+    if is_isbn(last_bit) or is_douban_id(last_bit):
         douban_isbn=last_bit
-        with open(result_dir + os.sep + "Book And IDs.txt", "a", encoding="utf-8") as f:
+        with open(result_dir + os.sep + "Books And IDs.txt", "a", encoding="utf-8") as f:
             f.write("{}\t{}\n".format(some_title, douban_isbn))
         return douban_isbn
     else:
@@ -136,7 +136,7 @@ def fetch_douban_isbn_or_id(some_title:str, old_titles, old_ids):
         bookinfo=get_field_from_pattern(many_titles_html,bookinfo_pattern,is_douban=1)
         if is_isbn(bookinfo) or is_douban_id(bookinfo):
             douban_id=bookinfo
-            with open(result_dir+os.sep+"Book And IDs.txt","a",encoding="utf-8") as f:
+            with open(result_dir+os.sep+"Books And IDs.txt","a",encoding="utf-8") as f:
                 f.write("{}\t{}\n".format(some_title,douban_id))
             print("\n ==== \n")
             return douban_id
@@ -161,7 +161,7 @@ def fetch_douban_isbn_or_id(some_title:str, old_titles, old_ids):
         if not (is_douban_id(douban_id) or is_isbn(douban_id)):
             douban_id=input("Get it right here:")
 
-        with open(result_dir + os.sep + "Book And IDs.txt", "a", encoding="utf-8") as f:
+        with open(result_dir + os.sep + "Books And IDs.txt", "a", encoding="utf-8") as f:
             f.write("{}\t{}\n".format(some_title, douban_id))
         print("\n ==== \n")
         return douban_id
@@ -169,6 +169,7 @@ def fetch_douban_isbn_or_id(some_title:str, old_titles, old_ids):
 def check_if_uploaded(check_url_with_md5):
     check_pattern="//div[@class='error']//text()"
     page_text=get_page_text(check_url_with_md5,auth_flag=1)
+    # print("PT:{}".format(page_text))
     checker=get_field_from_pattern(etree.HTML(page_text),check_pattern,comm="1")
     print("Checker:\t",checker)
     return not checker
@@ -179,7 +180,7 @@ def upload_one_book(some_path, some_id):
     print("Some Path:{}".format(some_path))
 
     bool2=check_if_uploaded(get_check_url(some_path))
-    print(bool2)
+    # print(bool2)
 
     if bool2:
         print("Earlier uploaded.")
@@ -198,6 +199,7 @@ def upload_one_book(some_path, some_id):
 
     r1=requests.post(main_url,data=m,headers=headers2,auth=auth)
 
+    sleep(1)
 
     upload_url=get_upload_url(some_path)
 
@@ -217,8 +219,8 @@ def upload_one_book(some_path, some_id):
             "toc":ori_toc,
             "language":"中文"}
 
-    r2=requests.post(upload_url,data=payload,auth=auth)
-
+    r2=requests.post(upload_url,data=payload,auth=auth,timeout=10)
+    # sleep(3)
     info_html=etree.HTML(r2.text)
 
     field_name_pattern1="//input[@type='text' and @name and @value]//@name"
@@ -230,10 +232,10 @@ def upload_one_book(some_path, some_id):
     fields_name2=get_field_from_pattern(info_html,field_name_pattern2,comm="r")
     fields_value2=get_field_from_pattern(info_html,field_value_pattern2,comm="r")
 
-    print(fields_name1)
-    print(fields_value1)
-    print(fields_name2)
-    print(fields_value2)
+    # print(fields_name1)
+    # print(fields_value1)
+    # print(fields_name2)
+    # print(fields_value2)
 
 
     fields1=dict(zip(fields_name1,fields_value1))
@@ -261,13 +263,13 @@ def upload_one_book(some_path, some_id):
     else:
         pass
 
-    must_display_name={"year","fetch_metadata"}
+    must_display_name={"year","fetch_metadata","pages"}
 
 
-    for k,v in fields.items():
-        # if (not k in must_display_name) and bool(v)==0:
-        #     continue
-        print("{}:\t{}".format(k,v))
+    # for k,v in fields.items():
+    #     # if (not k in must_display_name) and bool(v)==0:
+    #     #     continue
+    #     print("{}:\t{}".format(k,v))
 
     form_data={}
 
@@ -275,14 +277,16 @@ def upload_one_book(some_path, some_id):
         v_tup=(None,v)
         form_data[k]=v_tup
 
-    r3=requests.post(upload_url,files=form_data,headers=headers,auth=auth,params=fields)
-
-    print(r3.status_code)
+    r3=requests.post(upload_url,files=form_data,headers=headers,auth=auth,timeout=10)
+    # 我他妈傻逼在这个地方多传了一个params=fields！！艹！！
+    sleep(1)
+    # print(r3.status_code)
     print(get_check_url(some_path))
     # if r3.status_code==200:
     #     print("One book uploaded yet.")
-    with open(result_dir+os.sep+get_title_from_path(some_path)+"-"+some_id+"-"+str(r3.status_code)+".txt","w",encoding="utf-8") as f:
-        f.write(r3.text)
+    if not check_if_uploaded(get_check_url(some_path)):
+        with open(result_dir+os.sep+get_title_from_path(some_path)+".txt","w",encoding="utf-8") as f:
+            f.write(get_title_from_path(some_path))
 
 
 def single(some_book):
@@ -298,8 +302,8 @@ def main():
 
     # 按照修改时间排序，最早的最先出现
     books=sorted(os.listdir(book_dir),key=lambda x: os.path.getmtime(os.path.join(book_dir, x)),reverse=True)
-    if os.path.exists(result_dir + os.sep + "Book And IDs.txt") and os.path.getsize(result_dir + os.sep + "Book And IDs.txt")!=0:
-        with open(result_dir + os.sep + "Book And IDs.txt", "r", encoding="utf-8") as f:
+    if os.path.exists(result_dir + os.sep + "Books And IDs.txt") and os.path.getsize(result_dir + os.sep + "Books And IDs.txt")!=0:
+        with open(result_dir + os.sep + "Books And IDs.txt", "r", encoding="utf-8") as f:
             lines=f.readlines()
         old_titles=[each_line.split("\t")[0] for each_line in lines]
         old_ids=[each_line.split("\t")[1] for each_line in lines]
@@ -308,12 +312,15 @@ def main():
     bookids=[fetch_douban_isbn_or_id(book[:-4],old_titles,old_ids) for book in books]
     # books_bookids=[book[:-4]+"\t"+bookid+"\n" for book,bookid in zip(books,bookids)]
     # books_bookids_str="".join(books_bookids)
-    # with open(result_dir+os.sep+"Book And IDs.txt","a",encoding="utf-8") as f:
+    # with open(result_dir+os.sep+"Books And IDs.txt","a",encoding="utf-8") as f:
     #     f.write(books_bookids_str)
     for each_idx,each_book in enumerate(books):
         bookid=bookids[each_idx]
+        if book_id=="114514":
+            continue
         book_path=book_dir+os.sep+each_book
         upload_one_book(book_path,bookid)
+        # sleep(1)
         # pool.apply_async(single,args=(each_book,))
 
     # print("Pool: Wait for all done.")
