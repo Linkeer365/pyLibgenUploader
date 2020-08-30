@@ -6,24 +6,7 @@ import time
 import re
 import datetime
 
-from pyLibgenUploader import get_upload_url,get_file_md5
 
-# Prostak https://stackoverflow.com/questions/27835619/urllib-and-ssl-certificate-verify-failed-error/42334357#42334357
-
-# requests.packages.urllib3.disable_warnings()
-
-# import ssl
-
-# try:
-#     _create_unverified_https_context = ssl._create_unverified_context
-# except AttributeError:
-#     # Legacy Python that doesn't verify HTTPS certificates by default
-#     pass
-# else:
-#     # Handle target environment that doesn't support HTTPS verification
-#     ssl._create_default_https_context = _create_unverified_https_context
-
-# _create_unverified_https_context = ssl._create_unverified_context
 
 import bs4
 
@@ -38,9 +21,6 @@ auth=('genesis','upload')
 
 # driver=webdriver.Chrome(executable_path=r"C:\Users\linsi\AppData\Local\CentBrowser\Application\chrome.exe")
 # driver.get("https://www.baidu.com")
-
-book_dir=r"D:\AllDowns\newbooks"
-
 
 history_dir=r"C:\Users\linsi\AppData\Local\CentBrowser\User Data\Default"
 history_path=os.path.join(history_dir,"History")
@@ -146,18 +126,6 @@ def main():
     md5s=[]
     for book_type in book_types:
         urls=get_urls(book_type)
-        if book_type=="main":
-            books = sorted(os.listdir(book_dir), key=lambda x: os.path.getmtime(os.path.join(book_dir, x)),
-                           reverse=True)
-            foreign_urls=[]
-            for each_book in books:
-                book_path=book_dir+os.sep+each_book
-                foreign_url=get_upload_url(book_path)
-                foreign_urls.append(foreign_url)
-                print("FOREIGN URLs:{}".format(foreign_url))
-            urls=list(set(urls+foreign_urls))
-            print("\n"*5)
-            print(urls)
         md5s.append('\n')
         for each_url in urls:
             each_md5=get_md5(book_type,each_url)

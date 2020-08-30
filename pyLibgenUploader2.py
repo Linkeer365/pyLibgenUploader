@@ -88,7 +88,7 @@ def get_title_from_path(some_path: str) -> str:
 def is_isbn(some_num_str: str, num_str_len=13) -> bool:
     return some_num_str.isdigit() and len(some_num_str) == num_str_len
 
-def is_douban_id(some_num_str,num_str_len=6):
+def is_douban_id(some_num_str,num_str_len=6) -> bool:
     return some_num_str.isdigit() and len(some_num_str) >= num_str_len
 
 def get_field_from_pattern(some_html, some_field_pattern: str, comm=None,is_douban=0) -> str:
@@ -134,14 +134,14 @@ def get_page_text(some_url: str, auth_flag=0) -> str:
     elif auth_flag == 1:
         return requests.get(some_url, headers=headers, auth=auth).text
 
-def cap_num(some_num):
+def cap_num(some_num) -> int:
     # 注意，这里我们只预留到十，也就是说，十一以上的全部都得给我用阿拉伯数字！！！
     caps=["零","一","二","三","四","五","六","七","八","九","十"]
     for num,cap in enumerate(caps):
         if num==some_num:
             return cap
 
-def get_volume(some_book):
+def get_volume(some_book) -> str:
     # 注意，这里我们只预留到十，也就是说，十一以上的全部都得给我用阿拉伯数字！！！
     assert "第" in some_book and "卷" in some_book
     for volume_num in range(0,101):
@@ -267,11 +267,13 @@ def upload_one_book(some_path, some_id):
     #
     mywords = "\n\n书签已装载，\n书签制作方法请找 yjyouaremysunshine@163.com\n完全免费\n\n"
     #
-    payload={  "metadata_source": "douban",
+    payload={  
+            "metadata_source": "google_books",
             "metadata_query": "{}".format(some_id),
             "fetch_metadata": "Fetch",
             "toc":ori_toc,
-            "language":"中文"}
+            "language":"中文"
+            }
 
     r2=requests.post(upload_url,data=payload,auth=auth,timeout=10)
     # sleep(3)
@@ -335,7 +337,7 @@ def upload_one_book(some_path, some_id):
         form_data[k]=v_tup
 
     r3=requests.post(upload_url,files=form_data,headers=headers,auth=auth,timeout=10)
-    # 我他妈傻逼在这个地方多传a了一个params=fields！！艹！！
+    # 我他妈傻逼在这个地方多传了一个params=fields！！艹！！
     sleep(1)
     # print(r3.status_code)
     print(get_check_url(some_path))
@@ -356,7 +358,7 @@ def single(book_path,book_id):
 def main():
     # IO密集型
     # pool=multiprocessing.Pool(processes=64)
-    thread_pool = ThreadPoolExecutor(max_workers=127, thread_name_prefix="lgu_")
+    thread_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="lgu_")
     # 按照修改时间排序，最早的最先出现
     books=sorted(os.listdir(book_dir),key=lambda x: os.path.getmtime(os.path.join(book_dir, x)),reverse=True)
     books=[book for book in books if book.endswith(".pdf")]
@@ -380,7 +382,7 @@ def main():
         # upload_one_book(book_path,bookid)
         sleep(1)
         future=thread_pool.submit(single,book_path,bookid)
-    thread_pool.shutdown(wait=False)
+    thread_pool.shutdown(wait=True)
 
     print("ThreadPool: All done.")
     # pool.close()
