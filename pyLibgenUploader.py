@@ -258,20 +258,24 @@ def upload_one_book(some_path, some_id):
     upload_url=get_upload_url(some_path)
 
 
-
+    print(f"Book in process:《{book_without_pdf}》")
     print("Upload Url:",upload_url)
 
     toc_text=get_page_text(upload_url,auth_flag=1)
 
     ori_toc=get_field_from_pattern(etree.HTML(toc_text),"//textarea[@name='toc']//text()",comm="1")
+    ori_cover=get_field_from_pattern(etree.HTML(toc_text),"//input[@name='cover']//@value",comm="1")
+
+    print("Ori Cover:\t",ori_cover)
     #
-    mywords = "\n\n书签已装载，\n书签制作方法请找 yjyouaremysunshine@163.com\n完全免费\n\n"
+    mywords = "\n\n书签已装载，\n书签制作方法请找 yjyouaremysunshine@163.com\n完全免费\n（若有印刷不清等问题也请发送相关邮件，会尽快更新的）\n\n"
     #
     payload={  "metadata_source": "douban",
             "metadata_query": "{}".format(some_id),
             "fetch_metadata": "Fetch",
             "toc":ori_toc,
-            "language":"中文"}
+            "language":"中文",
+            "cover":ori_cover}
 
     r2=requests.post(upload_url,data=payload,auth=auth,timeout=10)
     # sleep(3)
@@ -296,9 +300,14 @@ def upload_one_book(some_path, some_id):
     fields2=dict(zip(fields_name2,fields_value2))
     fields2["description"]=mywords+fields2["description"]
 
+
+    # if bool(fields1["cover"])!=0:
+    fields1["cover"]=ori_cover
+    #     print("Cover from Me,\t",fields1["cover"])
+    # else:
+    #     print("Cover from douban,\t",fields1["cover"])
+
     # 补上mywords
-
-
 
     # for k,v in fields2.items():
     #     if k=="description":
@@ -391,9 +400,13 @@ def main():
     os.rename(result_dir + os.sep + "Books And IDs.txt",result_dir + os.sep + "{}.txt".format(now_str))
     print("all done.")
 
+# def tt2():
+#     single("D:\刺头书\统一书号\美国现代六诗人选集（申奥译）13.pdf",9787540132149)
 
 
 if __name__ == '__main__':
+    # tt2()
+    # sys.exit(0)
     main()
 
 
@@ -415,6 +428,7 @@ def tt(some_title,some_path):
     ul_link=get_upload_url(some_path)
     print("1: ", ul_link)
     print("3: ", response.headers)
+
 
 # tt("中文测试文档.pdf",r"C:\Users\linsi\Desktop\中文测试文档.pdf")
 

@@ -50,13 +50,10 @@ last_md5_list=[]
 if os.path.exists("last_md5s.txt"):
     print("good.")
     with open("last_md5s.txt","r",encoding="utf-8") as f:
-        last_md5_list=f.readlines()
+        last_md5_set=set(f.readlines())
 else:
-    last_md5_list=[]
+    last_md5_set=set()
     pass
-
-
-last_md5_set=set(last_md5_list)
 
 
 def get_urls(book_type):
@@ -143,7 +140,8 @@ def get_field(field_name,field_pattern,html):
 
 def main():
     book_types=("fiction","main")
-    md5s=[]
+    md5s=set()
+    bad_md5s=set()
     for book_type in book_types:
         urls=get_urls(book_type)
         if book_type=="main":
@@ -158,14 +156,14 @@ def main():
             urls=list(set(urls+foreign_urls))
             print("\n"*5)
             print(urls)
-        md5s.append('\n')
+        md5s.add('\n')
         for each_url in urls:
             each_md5=get_md5(book_type,each_url)
             # print(last_md5_set)
-            if each_md5+'\n' in last_md5_set:
+            if each_md5+'\n' in last_md5_set or each_md5 in last_md5_set:
                 print("yes!")
                 continue
-            md5s.append(each_md5)
+            md5s.add(each_md5)
             each_resp_url=get_resp_url(book_type,each_md5)
             if book_type=="main":
                 upmain_resp_text = requests.get(each_resp_url, headers=headers, auth=auth).text
@@ -231,6 +229,11 @@ def main():
                     print(title, author, isbn, sep='**')
                 main_link_format="[{}]({})".format(each_md5,main_link)
                 pack_str = "| {} | {} | {} | {} |".format(title, author, isbn, main_link_format)
+                if title!="NIL":
+                    pack_str = "| {} | {} | {} | {} |".format(title, author, isbn, main_link_format)
+                else:
+                    bad_md5s.add(each_md5)
+                    continue
                 with open("cc.md", "a", encoding="utf-8") as f:
                     f.write(pack_str)
                     f.write("\n")
@@ -276,11 +279,15 @@ def main():
                 fiction_link_format="[{}]({})".format(each_md5,fiction_link)
                 if title!="NIL":
                     pack_str = "| {} | {} | {} | {} |".format(title, author, isbn, fiction_link_format)
+                else:
+                    bad_md5s.append(each_md5)
+                    continue
                 with open("cc.md", "a", encoding="utf-8") as f:
                     f.write(pack_str)
                     f.write("\n")
                 time.sleep(1)
-    md5s_str="\n".join(md5s)
+    md5s=md5s-bad_md5s
+    md5s_str="\n".join(list(md5s))
     with open("last_md5s.txt","a",encoding="utf-8") as f:
         date_obj=datetime.datetime.now()
         date_str=date_obj.strftime("%Y-%m-%d %H:%M:%S")
