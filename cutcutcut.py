@@ -59,7 +59,7 @@ with open("{}/free-book-Chinese-CN.md".format(desktop_path),"r",encoding="utf-8"
 packs=[[],[],[],[]]
 
 fiction_link_len=len("http://libgen.rs/fiction/E7C5FAF75F18FDEE7EBBA0A62C2E91BA")
-main_link_len=len("http://libgen.rs/fiction/E7C5FAF75F18FDEE7EBBA0A62C2E91BA")
+main_link_len=len("http://libgen.is/book/index.php?md5=D400E1D9EB9ED3F50D5AF35406D78A0C")
 
 for line in lines:
     if "----" in line:
@@ -71,7 +71,7 @@ for line in lines:
     if link_head!=-1:
         if "fiction" in link:
             link=link[link_head:link_head+fiction_link_len]
-        elif "main" in link:
+        elif "index.php" in link:
             link=link[link_head:link_head+main_link_len]
     packs[0].append(title)
     packs[1].append(author)
